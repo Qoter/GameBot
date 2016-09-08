@@ -14,6 +14,7 @@ namespace SpurRoguelike
     {
         public static void Main(string[] args)
         {
+            //Little code change
             var commandLineParser = new FluentCommandLineParser<GameOptions>();
 
             commandLineParser
