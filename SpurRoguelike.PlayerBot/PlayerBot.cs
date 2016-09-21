@@ -14,6 +14,11 @@ namespace SpurRoguelike.PlayerBot
 
         #region States
 
+        private static bool AttackManyMonsters(LevelView view)
+        {
+            return view.Monsters.Count(m => view.Player.Location.IsInRange(m.Location, 1)) > 1;
+        }
+
         private class GoToExit : State<PlayerBot>
         {
             public GoToExit(PlayerBot self) : base(self)
@@ -95,7 +100,13 @@ namespace SpurRoguelike.PlayerBot
 
             public override Turn MakeTurn(LevelView levelView, IMessageReporter massageReporter)
             {
-                if (levelView.Player.Health < 40 && levelView.HealthPacks.Any())
+                if (levelView.Player.Health < 70 && levelView.HealthPacks.Any())
+                {
+                    GoToState(() => new NeedHealth(Self));
+                    return Self.state.MakeTurn(levelView, massageReporter);
+                }
+
+                if (AttackManyMonsters(levelView) && levelView.Player.Health != 100)
                 {
                     GoToState(() => new NeedHealth(Self));
                     return Self.state.MakeTurn(levelView, massageReporter);
@@ -117,8 +128,10 @@ namespace SpurRoguelike.PlayerBot
                 }
 
 
+               var monsterLoc = levelView.Monsters.Select((m, i) => new {m = m, i  = i}).Min(m => Tuple.Create(GetDistance(m.m.Location, levelView.Player.Location),m.i, m.m.Location)).Item3;
+
                 var path = PathHelper.FindShortestPath(levelView, levelView.Player.Location,
-                    (location, view) => view.Monsters.Any(m => m.Location == location));
+                    (location, view) => location == monsterLoc);
                 
                 return PathHelper.GetFirstTurn(path);
             }
@@ -129,6 +142,11 @@ namespace SpurRoguelike.PlayerBot
             }
         }
 
+        private static double GetDistance(Location l1, Location l2)
+        {
+            return Math.Sqrt((l1.X - l2.X)*(l1.X - l2.X) + (l1.Y - l2.Y)*(l1.Y - l2.Y));
+        }
+
         private class Fight : State<PlayerBot>
         {
             public Fight(PlayerBot self) : base(self)
@@ -137,7 +155,13 @@ namespace SpurRoguelike.PlayerBot
 
             public override Turn MakeTurn(LevelView levelView, IMessageReporter massageReporter)
             {
-                if (levelView.Player.Health < 40 && levelView.HealthPacks.Any())
+                if (levelView.Player.Health < 70 && levelView.HealthPacks.Any())
+                {
+                    GoToState(() => new NeedHealth(Self));
+                    return Self.state.MakeTurn(levelView, massageReporter);
+                }
+
+                if (AttackManyMonsters(levelView) && levelView.Player.Health != 100)
                 {
                     GoToState(() => new NeedHealth(Self));
                     return Self.state.MakeTurn(levelView, massageReporter);
@@ -165,7 +189,6 @@ namespace SpurRoguelike.PlayerBot
         #endregion
         public Turn MakeTurn(LevelView levelView, IMessageReporter messageReporter)
         {
-            Thread.Sleep(10);
             if (state == null)
                 state = new GoToMonster(this);
             return state.MakeTurn(levelView, messageReporter);

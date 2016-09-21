@@ -107,7 +107,7 @@ namespace SpurRoguelike.Content
 
             private Offset AvoidWall(Offset stepDirection)
             {
-                for (int i = 0; i < 4 && Self.Level.Field[Self.Location + stepDirection] == CellType.Wall; i++)
+                for (int i = 0; i < 4 && Self.Level.Field[Self.Location + stepDirection] == CellType.Wall;  i++)
                     stepDirection = stepDirection.Turn(1);
                 
                 return stepDirection;
