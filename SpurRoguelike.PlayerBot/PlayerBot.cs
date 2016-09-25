@@ -1,8 +1,7 @@
-﻿using System;
+﻿/*
+using System;
 using System.Linq;
-using System.Threading;
 using SpurRoguelike.Core;
-using SpurRoguelike.Core.Entities;
 using SpurRoguelike.Core.Primitives;
 using SpurRoguelike.Core.Views;
 
@@ -19,9 +18,9 @@ namespace SpurRoguelike.PlayerBot
             return view.Monsters.Count(m => view.Player.Location.IsInRange(m.Location, 1)) > 1;
         }
 
-        private class GoToExit : State<PlayerBot>
+        private class MovementToTheExit : State<PlayerBot>
         {
-            public GoToExit(PlayerBot self) : base(self)
+            public MovementToTheExit(PlayerBot self) : base(self)
             {
             }
 
@@ -29,7 +28,7 @@ namespace SpurRoguelike.PlayerBot
             {
                 if (levelView.Monsters.Any())
                 {
-                    GoToState(() => new GoToMonster(Self));
+                    GoToState(() => new FindMonster(Self));
                     return Self.state.MakeTurn(levelView, massageReporter);
                 }
 
@@ -76,7 +75,7 @@ namespace SpurRoguelike.PlayerBot
 
                 if (levelView.Player.Health == 100)
                 {
-                    GoToState(() => new GoToMonster(Self));
+                    GoToState(() => new FindMonster(Self));
                     return Self.state.MakeTurn(levelView, massageReporter);
                 }
 
@@ -92,9 +91,9 @@ namespace SpurRoguelike.PlayerBot
             }
         }
 
-        private class GoToMonster : State<PlayerBot>
+        private class FindMonster : State<PlayerBot>
         {
-            public GoToMonster(PlayerBot self) : base(self)
+            public FindMonster(PlayerBot self) : base(self)
             {
             }
 
@@ -116,14 +115,14 @@ namespace SpurRoguelike.PlayerBot
                 {
                     if (levelView.Player.Location.IsInRange(monster.Location, 1))
                     {
-                        GoToState(() => new Fight(Self));
+                        GoToState(() => new Attack(Self));
                         return Self.state.MakeTurn(levelView, massageReporter);
                     }
                 }
 
                 if (!levelView.Monsters.Any())
                 {
-                    GoToState(() => new GoToExit(Self));
+                    GoToState(() => new MovementToTheExit(Self));
                     return Self.state.MakeTurn(levelView, massageReporter);
                 }
 
@@ -147,37 +146,37 @@ namespace SpurRoguelike.PlayerBot
             return Math.Sqrt((l1.X - l2.X)*(l1.X - l2.X) + (l1.Y - l2.Y)*(l1.Y - l2.Y));
         }
 
-        private class Fight : State<PlayerBot>
+        private class Attack : State<PlayerBot>
         {
-            public Fight(PlayerBot self) : base(self)
+            public Attack(PlayerBot self) : base(self)
             {
             }
 
-            public override Turn MakeTurn(LevelView levelView, IMessageReporter massageReporter)
+            public override Turn MakeTurn(LevelView view, IMessageReporter massageReporter)
             {
-                if (levelView.Player.Health < 70 && levelView.HealthPacks.Any())
+                if (view.Player.Health < 70 && view.HealthPacks.Any())
                 {
                     GoToState(() => new NeedHealth(Self));
-                    return Self.state.MakeTurn(levelView, massageReporter);
+                    return Self.state.MakeTurn(view, massageReporter);
                 }
 
-                if (AttackManyMonsters(levelView) && levelView.Player.Health != 100)
+                if (AttackManyMonsters(view) && view.Player.Health != 100)
                 {
                     GoToState(() => new NeedHealth(Self));
-                    return Self.state.MakeTurn(levelView, massageReporter);
+                    return Self.state.MakeTurn(view, massageReporter);
                 }
 
-                foreach (var monster in levelView.Monsters)
+                foreach (var monster in view.Monsters)
                 {
-                    if (levelView.Player.Location.IsInRange(monster.Location, 1))
+                    if (view.Player.Location.IsInRange(monster.Location, 1))
                     {
-                        var offset = monster.Location - levelView.Player.Location;
+                        var offset = monster.Location - view.Player.Location;
                         return Turn.Attack(offset);
                     }
                 }
 
-                GoToState(() => new GoToMonster(Self));
-                return Self.state.MakeTurn(levelView, massageReporter);
+                GoToState(() => new FindMonster(Self));
+                return Self.state.MakeTurn(view, massageReporter);
             }
 
             public override void GoToState(Func<State<PlayerBot>> getNewState)
@@ -190,8 +189,9 @@ namespace SpurRoguelike.PlayerBot
         public Turn MakeTurn(LevelView levelView, IMessageReporter messageReporter)
         {
             if (state == null)
-                state = new GoToMonster(this);
+                state = new FindMonster(this);
             return state.MakeTurn(levelView, messageReporter);
         }
     }
 }
+*/
