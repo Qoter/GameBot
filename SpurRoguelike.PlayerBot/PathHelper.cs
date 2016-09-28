@@ -20,7 +20,8 @@ namespace SpurRoguelike.PlayerBot
                 var currentLocation = queue.Dequeue();
                 var nextLocations = GetAdjacentLocations(currentLocation, levelView)
                     .Where(l => IsPassable(l, levelView) || isTarget(l, levelView))
-                    .Where(l => !previous.ContainsKey(l));
+                    .Where(l => !previous.ContainsKey(l))
+                    .Where(l => !levelView.GetHealthPackAt(l).HasValue);
 
                 foreach (var nextLocation in nextLocations)
                 {

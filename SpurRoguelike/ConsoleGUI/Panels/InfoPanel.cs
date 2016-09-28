@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using SpurRoguelike.Core;
 using SpurRoguelike.Core.Entities;
 using SpurRoguelike.Core.Primitives;
@@ -56,7 +57,18 @@ namespace SpurRoguelike.ConsoleGUI.Panels
 
         private void DrawEntityStats(Entity entity)
         {
+            var level = levelProvider();
+
             var lineIndex = 0;
+            var healthCount = level.HealthPacks.Count();
+            var monstersCount = level.Monsters.Count();
+            var firstMonsterHealth = level.Monsters.FirstOrDefault() == null
+                ? "No"
+                : level.Monsters.First().Health.ToString();
+
+            DrawStatLine(ref lineIndex, $"HP count: {healthCount}");
+            DrawStatLine(ref lineIndex, $"Monsters count: {monstersCount}");
+            DrawStatLine(ref lineIndex, $"First monster hp: {firstMonsterHealth}");
             if (entity is Player)
             {
                 DrawStatLine(ref lineIndex, "You");

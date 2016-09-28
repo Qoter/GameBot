@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using SpurRoguelike.Core.Primitives;
 using SpurRoguelike.Core.Views;
 
@@ -14,13 +11,19 @@ namespace SpurRoguelike.PlayerBot
         public static int[,] Generate(LevelView levelView)
         {
             var costs = new int[levelView.Field.Width, levelView.Field.Height];
-            for (int x = 0; x < costs.GetLength(0); x++)
+            for (var x = 0; x < costs.GetLength(0); x++)
             {
-                for (int y = 0; y < costs.GetLength(1); y++)
+                for (var y = 0; y < costs.GetLength(1); y++)
                 {
                     costs[x, y] = Math.Max(1, CalculateCost(levelView, x, y));
                 }
             }
+
+            foreach (var item in levelView.Items)
+            {
+                costs[item.Location.X, item.Location.Y] = 100;
+            }
+
             return costs;
         }
 
@@ -28,6 +31,7 @@ namespace SpurRoguelike.PlayerBot
         {
             var location = new Location(x, y);
             var cell = view.Field[location];
+
             if (cell == CellType.Wall || cell == CellType.Exit || cell == CellType.Trap || view.Monsters.Any(m => m.Location == location))
             {
                 return -1;
@@ -42,8 +46,13 @@ namespace SpurRoguelike.PlayerBot
 
         private static int CalculateMonsterInfluence(PawnView monster, Location location)
         {
+            if (monster.Location.IsInRange(location, 1))
+            {
+                return Seed;
+            }
+
             var offset = monster.Location - location;
-            var range = Math.Max(Math.Abs(offset.XOffset), Math.Abs(offset.YOffset));
+            var range = offset.Size();//Math.Max(Math.Abs(offset.XOffset), Math.Abs(offset.YOffset));
 
             var value = Seed;
             for (var i = 0; i < range - 1; i++)
