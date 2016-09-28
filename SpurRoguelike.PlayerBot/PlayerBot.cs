@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using SpurRoguelike.Core;
 using SpurRoguelike.Core.Primitives;
@@ -9,49 +10,50 @@ namespace SpurRoguelike.PlayerBot
     public class PlayerBot : IPlayerController
     {
         private readonly PushdownAutomaton automatonOfBotState;
-        private readonly Metadata meta;
-        private const int EndFightHealthLimit = 72;
+        private const int EndFightHealthLimit = 65;
         private const int EndCollectHealthLimit = 100;
 
-        private class Metadata
-        {
-            public bool HealthPackExists = false;
-        }
 
         public PlayerBot()
         {
-            meta = new Metadata();
             automatonOfBotState = new PushdownAutomaton();
             automatonOfBotState.PushAction(Fight);
         }
 
         public Turn MakeTurn(LevelView levelView, IMessageReporter messageReporter)
         {
-            //Thread.Sleep(100);
-            //HtmlGenerator.WriteHtml(levelView, new Dictionary<Location, int>());
-            return automatonOfBotState.CurrentAction.Invoke(levelView);
+            var height = levelView.Field.Height;
+            //Thread.Sleep(50);
+            //var costs = CostGenerator.Generate(levelView);
+            //HtmlGenerator.WriteHtml(levelView, costs);
+            if (Console.KeyAvailable)
+            {
+                //Stop for debug
+            }
+            messageReporter.ReportMessage(automatonOfBotState.CurrentAction.Method.Name);
+            return automatonOfBotState.CurrentAction.Invoke(levelView, messageReporter);
         }
 
 
-        private Turn Fight(LevelView levelView)
+        private Turn Fight(LevelView levelView, IMessageReporter reporter)
         {
-            if (levelView.Player.Health < EndFightHealthLimit) // Collect health if health low
+            if (levelView.Player.Health < EndFightHealthLimit && levelView.HealthPacks.Any()) // Collect health if health low
             {
                 automatonOfBotState.PushAction(CollectHealth);
-                return automatonOfBotState.CurrentAction.Invoke(levelView);
+                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
             }
 
             if (!levelView.Monsters.Any()) // Move to exit if no monsters
             {
                 automatonOfBotState.PopAction();
                 automatonOfBotState.PushAction(MoveToExit);
-                return automatonOfBotState.CurrentAction.Invoke(levelView);
+                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
             }
 
             if (levelView.Monsters.All(m => !levelView.Player.Location.IsInRange(m.Location, 1))) // all monsters on long distance
             {
                 automatonOfBotState.PushAction(ApproachToMonster);
-                return automatonOfBotState.CurrentAction.Invoke(levelView);
+                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
             }
 
             //fight
@@ -60,57 +62,52 @@ namespace SpurRoguelike.PlayerBot
             return Turn.Attack(attackOffset);
         }
 
-        private Turn ApproachToMonster(LevelView levelView)
+        private Turn ApproachToMonster(LevelView levelView, IMessageReporter reporter)
         {
             if (levelView.Monsters.Any(m => levelView.Player.Location.IsInRange(m.Location, 1)) || !levelView.Monsters.Any())
             {
                 automatonOfBotState.PopAction();
-                return automatonOfBotState.CurrentAction.Invoke(levelView);
+                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
             }
 
-            if (levelView.Player.Health < EndFightHealthLimit)
+            if (levelView.Player.Health < EndFightHealthLimit && levelView.HealthPacks.Any())
             {
                 automatonOfBotState.PushAction(CollectHealth);
-                return automatonOfBotState.CurrentAction.Invoke(levelView);
+                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
             }
 
 
-            //todo approach
             var monstersLocations = new HashSet<Location>(levelView.Monsters.Select(m => m.Location));
             var pathToNearestMonstar = PathHelper.FindShortestPath(levelView, levelView.Player.Location, (loc, _) => monstersLocations.Contains(loc));
             return PathHelper.GetFirstTurn(pathToNearestMonstar);
         }
 
 
-        private Turn CollectHealth(LevelView levelView)
+        private Turn CollectHealth(LevelView levelView, IMessageReporter reporter)
         {
             if (levelView.Player.Health < EndCollectHealthLimit && levelView.HealthPacks.Any())
             {
                 //collect health
                 var healthLocations = new HashSet<Location>(levelView.HealthPacks.Select(hp => hp.Location));
-                var pathToNearestHealth = PathHelper.FindShortestPath(levelView, levelView.Player.Location,
-                    (loc, _) => healthLocations.Contains(loc));
+                var cost = CostGenerator.Generate(levelView);
+                var pathToNearestHealth = PathHelper.FindShortestPathWithCost(levelView, cost, levelView.Player.Location,
+                    loc => healthLocations.Contains(loc));
                 return PathHelper.GetFirstTurn(pathToNearestHealth);
             }
 
-            if (!levelView.HealthPacks.Any())
-            {
-                meta.HealthPackExists = false;
-            }
-
             automatonOfBotState.PopAction();
-            return automatonOfBotState.CurrentAction.Invoke(levelView);
+            return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
         }
 
-        private Turn MoveToExit(LevelView levelView)
+        private Turn MoveToExit(LevelView levelView, IMessageReporter reporter)
         {
             if (levelView.Monsters.Any())
             {
                 automatonOfBotState.PopAction();
                 automatonOfBotState.PushAction(Fight);
-                return automatonOfBotState.CurrentAction.Invoke(levelView);
+                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
             }
-            if (!meta.HealthPackExists || levelView.Player.Health == 100)
+            if (!levelView.HealthPacks.Any() || levelView.Player.Health == 100)
             {
                 //MoveToExit
                 var exitLocation = GetExitLocation(levelView);
@@ -121,7 +118,7 @@ namespace SpurRoguelike.PlayerBot
 
             //
             automatonOfBotState.PushAction(CollectHealth);
-            return automatonOfBotState.CurrentAction.Invoke(levelView);
+            return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
         }
 
         private Location GetExitLocation(LevelView levelView)

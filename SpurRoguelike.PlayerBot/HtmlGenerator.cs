@@ -17,7 +17,7 @@ namespace SpurRoguelike.PlayerBot
             private const string Item = "Item";
             private const string Player = "Player";
 
-            public static string OpenTd(string className)
+            private static string OpenTd(string className)
             {
                 return $"<td class='{className}'>";
             }
@@ -28,7 +28,7 @@ namespace SpurRoguelike.PlayerBot
 
 
 
-            public static string Generate(LevelView levelView, Dictionary<Location, int> costs)
+            public static string Generate(LevelView levelView, int[,] costs)
             {
                 var table = new string[levelView.Field.Width, levelView.Field.Height];
 
@@ -61,8 +61,8 @@ namespace SpurRoguelike.PlayerBot
                 {
                     for (var y = 0; y < table.GetLength(1); y++)
                     {
-                        var value = costs.ContainsKey(new Location(x, y)) ? costs[new Location(x, y)] : 0;
-                        table[x, y] += CloseTd(value);
+                        //var value = costs.ContainsKey(new Location(x, y)) ? costs[new Location(x, y)] : 0;
+                        table[x, y] += CloseTd(costs[x, y]);
                     }
                 }
 
@@ -84,10 +84,9 @@ namespace SpurRoguelike.PlayerBot
 
             }
 
-            public static void WriteHtml(LevelView levelView, Dictionary<Location, int> cost)
+            public static void WriteHtml(LevelView levelView, int[,] costs, string pathToHtml)
             {
-                var path = @"C:\Users\Artem\Desktop\htmlLevel\index.html";
-                File.WriteAllText(path, Generate(levelView, cost));
+                File.WriteAllText(pathToHtml, Generate(levelView, costs));
             }
         }
 }

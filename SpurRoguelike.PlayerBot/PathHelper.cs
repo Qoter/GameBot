@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mail;
 using SpurRoguelike.Core.Primitives;
 using SpurRoguelike.Core.Views;
 
@@ -31,6 +32,76 @@ namespace SpurRoguelike.PlayerBot
                 }
             }
             return null;
+        }
+
+        public static List<Location> FindShortestPathWithCost(LevelView levelView, int[,] costs, Location from, Func<Location, bool> isTarget)
+        {
+            var forOpen = new HashSet<Location>();
+            var dist = new Dictionary<Location, int>();
+            var prev = new Dictionary<Location, Location>();
+
+            for (int x = 0; x < levelView.Field.Width; x++)
+            {
+                for (int y = 0; y < levelView.Field.Height; y++)
+                {
+                    var v = new Location(x, y);
+                    if (IsPassable(v, levelView) || isTarget(v))
+                    {
+                        dist[v] = int.MaxValue;
+                        prev[v] = default(Location);
+                        forOpen.Add(v);
+                    }
+                }
+            }
+
+            dist[from] = 0;
+
+            while (forOpen.Any())
+            {
+                var u = GetLocationWithMinDist(forOpen, dist);
+                forOpen.Remove(u);
+
+                foreach (var v in GetAdjacentLocations(u, levelView).Where(l => IsPassable(l, levelView) || isTarget(l)))
+                {
+                    if (costs[v.X, v.Y] == -1)
+                    {
+                        throw new IndexOutOfRangeException();
+                    }
+                    if (dist[u] == int.MaxValue)
+                    {
+                        dist[v] = costs[v.X, v.Y];
+                        prev[v] = u;
+                    }
+                    else
+                    {
+                        var alt = dist[u] + costs[v.X, v.Y];
+                        if (alt < dist[v])
+                        {
+                            dist[v] = alt;
+                            prev[v] = u;
+                        }
+                    }
+
+                }
+
+                if (isTarget(u))
+                {
+                    return CreatePath(from, u, prev);
+                }
+            }
+
+            return null;
+        }
+
+        private static Location GetLocationWithMinDist(HashSet<Location> q, Dictionary<Location, int> dist)
+        {
+            var minLoc = q.First();
+            foreach (var location in q)
+            {
+                if (dist[location] < dist[minLoc])
+                    minLoc = location;
+            }
+            return minLoc;
         }
 
         private static List<Location> CreatePath(Location from, Location to, Dictionary<Location, Location> previous)
