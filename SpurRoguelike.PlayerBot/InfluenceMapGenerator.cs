@@ -7,7 +7,9 @@ namespace SpurRoguelike.PlayerBot
 {
     public class InfluenceMapGenerator
     {
-        private const int MonsterInfluenceSeed = 10;
+        private const int MonsterInfluenceSeed = 16;
+        private const int WallInfluenceSeed = 20;
+
         public static int[,] Generate(LevelView levelView)
         {
             var influenceMap = new int[levelView.Field.Width, levelView.Field.Height];
@@ -15,7 +17,7 @@ namespace SpurRoguelike.PlayerBot
             {
                 for (var y = 0; y < influenceMap.GetLength(1); y++)
                 {
-                    influenceMap[x, y] = Math.Max(1, CalculeteInfluence(levelView, x, y));
+                    influenceMap[x, y] = CalculeteInfluence(levelView, x, y);
                 }
             }
 
@@ -31,30 +33,80 @@ namespace SpurRoguelike.PlayerBot
         {
             var location = new Location(x, y);
             var cell = view.Field[location];
+            var baseInfluence = CalculateBaseInfluence(view, x, y);
 
+            /*
             if (cell == CellType.Wall || cell == CellType.Exit || cell == CellType.Trap || view.Monsters.Any(m => m.Location == location))
             {
                 return -1;
-            }
+            }*/
 
-            if (!view.Monsters.Any())
-                return 1;
-            return view.Monsters
+            if (!baseInfluence.HasValue)
+                return -1;
+
+            return baseInfluence.Value + view.Monsters
                 .Select(m => CalculateMonsterInfluence(m, location))
-                .Aggregate(Intersect);
+                .Aggregate(0, Intersect);
+        }
+
+        private static int? CalculateBaseInfluence(LevelView view, int x, int y)
+        {
+            var location = new Location(x, y);
+            var cell = view.Field[location];
+            if (cell == CellType.Wall || cell == CellType.Trap)
+                return null;
+
+            var rightWall = Enumerable.Range(0, 50)
+                    .Select(deltaX => new Location(location.X + deltaX, location.Y))
+                    .First(loc => view.Field[loc] == CellType.Wall);
+
+            var leftWall = Enumerable.Range(0, 50)
+                    .Select(deltaX => new Location(location.X - deltaX, location.Y))
+                    .First(loc => view.Field[loc] == CellType.Wall);
+
+            var upWall = Enumerable.Range(0, 50)
+                    .Select(deltaY => new Location(location.X, location.Y - deltaY))
+                    .First(loc => view.Field[loc] == CellType.Wall);
+            
+            var downWall = Enumerable.Range(0, 50)
+                    .Select(deltaY => new Location(location.X, location.Y + deltaY))
+                    .First(loc => view.Field[loc] == CellType.Wall);
+            var walls = new[] {rightWall, leftWall, upWall, downWall};
+            var offsets = walls.Select(wall => wall - location);
+
+            var leftRight = leftWall - rightWall;
+            var upDown = upWall - downWall;
+
+            var min = Math.Min(leftRight.Size(), upDown.Size());
+
+            int result;
+            if (offsets.Any(o => o.Size() == 1))
+                result = WallInfluenceSeed;
+            else if (offsets.Any(o => o.Size() == 2))
+                result = WallInfluenceSeed/ 2;
+            else if (offsets.Any(o => o.Size() == 3))
+                result = WallInfluenceSeed/4;
+            else
+                result = 1;
+
+            if (min < 4)
+                result += 100;
+    
+            return result;
         }
 
         private static int CalculateMonsterInfluence(PawnView monster, Location location)
         {
+            var seed = MonsterInfluenceSeed;
             if (monster.Location.IsInRange(location, 1))
             {
-                return MonsterInfluenceSeed;
+                return seed;
             }
 
             var offset = monster.Location - location;
             var range = offset.Size();//Math.Max(Math.Abs(offset.XOffset), Math.Abs(offset.YOffset));
 
-            var value = MonsterInfluenceSeed;
+            var value = seed;
             for (var i = 0; i < range - 1; i++)
             {
                 value = Reduce(value);
