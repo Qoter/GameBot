@@ -43,7 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CostGenerator.cs" />
+    <Compile Include="InfluenceMapGenerator.cs" />
     <Compile Include="HtmlGenerator.cs" />
     <Compile Include="PathHelper.cs" />
     <Compile Include="PlayerBot.cs" />

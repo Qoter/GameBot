@@ -5,29 +5,29 @@ using SpurRoguelike.Core.Views;
 
 namespace SpurRoguelike.PlayerBot
 {
-    public class CostGenerator
+    public class InfluenceMapGenerator
     {
-        private const int Seed = 10;
+        private const int MonsterInfluenceSeed = 10;
         public static int[,] Generate(LevelView levelView)
         {
-            var costs = new int[levelView.Field.Width, levelView.Field.Height];
-            for (var x = 0; x < costs.GetLength(0); x++)
+            var influenceMap = new int[levelView.Field.Width, levelView.Field.Height];
+            for (var x = 0; x < influenceMap.GetLength(0); x++)
             {
-                for (var y = 0; y < costs.GetLength(1); y++)
+                for (var y = 0; y < influenceMap.GetLength(1); y++)
                 {
-                    costs[x, y] = Math.Max(1, CalculateCost(levelView, x, y));
+                    influenceMap[x, y] = Math.Max(1, CalculeteInfluence(levelView, x, y));
                 }
             }
 
             foreach (var item in levelView.Items)
             {
-                costs[item.Location.X, item.Location.Y] = 100;
+                influenceMap[item.Location.X, item.Location.Y] = influenceMap[item.Location.X, item.Location.Y] + 100;
             }
 
-            return costs;
+            return influenceMap;
         }
 
-        private static int CalculateCost(LevelView view, int x, int y)
+        private static int CalculeteInfluence(LevelView view, int x, int y)
         {
             var location = new Location(x, y);
             var cell = view.Field[location];
@@ -48,13 +48,13 @@ namespace SpurRoguelike.PlayerBot
         {
             if (monster.Location.IsInRange(location, 1))
             {
-                return Seed;
+                return MonsterInfluenceSeed;
             }
 
             var offset = monster.Location - location;
             var range = offset.Size();//Math.Max(Math.Abs(offset.XOffset), Math.Abs(offset.YOffset));
 
-            var value = Seed;
+            var value = MonsterInfluenceSeed;
             for (var i = 0; i < range - 1; i++)
             {
                 value = Reduce(value);

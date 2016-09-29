@@ -35,7 +35,7 @@ namespace SpurRoguelike.PlayerBot
             return null;
         }
 
-        public static List<Location> FindShortestPathWithCost(LevelView levelView, int[,] costs, Location from, Func<Location, bool> isTarget)
+        public static List<Location> FindShortestPathWithInfluenceMap(LevelView levelView, int[,] influenceMap, Location from, Func<Location, bool> isTarget)
         {
             var forOpen = new HashSet<Location>();
             var dist = new Dictionary<Location, int>();
@@ -64,18 +64,18 @@ namespace SpurRoguelike.PlayerBot
 
                 foreach (var v in GetAdjacentLocations(u, levelView).Where(l => IsPassable(l, levelView) || isTarget(l)))
                 {
-                    if (costs[v.X, v.Y] == -1)
+                    if (influenceMap[v.X, v.Y] == -1)
                     {
                         throw new IndexOutOfRangeException();
                     }
                     if (dist[u] == int.MaxValue)
                     {
-                        dist[v] = costs[v.X, v.Y];
+                        dist[v] = influenceMap[v.X, v.Y];
                         prev[v] = u;
                     }
                     else
                     {
-                        var alt = dist[u] + costs[v.X, v.Y];
+                        var alt = dist[u] + influenceMap[v.X, v.Y];
                         if (alt < dist[v])
                         {
                             dist[v] = alt;

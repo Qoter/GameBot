@@ -22,9 +22,8 @@ namespace SpurRoguelike.PlayerBot
 
         public Turn MakeTurn(LevelView levelView, IMessageReporter messageReporter)
         {
-            var height = levelView.Field.Height;
             //Thread.Sleep(50);
-            //var costs = CostGenerator.Generate(levelView);
+            //var costs = InfluenceMapGenerator.Generate(levelView);
             //HtmlGenerator.WriteHtml(levelView, costs);
             if (Console.KeyAvailable)
             {
@@ -89,8 +88,8 @@ namespace SpurRoguelike.PlayerBot
             {
                 //collect health
                 var healthLocations = new HashSet<Location>(levelView.HealthPacks.Select(hp => hp.Location));
-                var cost = CostGenerator.Generate(levelView);
-                var pathToNearestHealth = PathHelper.FindShortestPathWithCost(levelView, cost, levelView.Player.Location,
+                var cost = InfluenceMapGenerator.Generate(levelView);
+                var pathToNearestHealth = PathHelper.FindShortestPathWithInfluenceMap(levelView, cost, levelView.Player.Location,
                     loc => healthLocations.Contains(loc));
                 return PathHelper.GetFirstTurn(pathToNearestHealth);
             }
