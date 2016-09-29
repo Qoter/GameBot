@@ -7,8 +7,8 @@ namespace SpurRoguelike.PlayerBot
 {
     public class InfluenceMapGenerator
     {
-        private const int MonsterInfluenceSeed = 16;
-        private const int WallInfluenceSeed = 20;
+        private static int monsterInfluenceSeed = 16;
+        private static int wallInfluenceSeed = 20;
 
         public static int[,] Generate(LevelView levelView)
         {
@@ -45,7 +45,7 @@ namespace SpurRoguelike.PlayerBot
                 return -1;
 
             return baseInfluence.Value + view.Monsters
-                .Select(m => CalculateMonsterInfluence(m, location))
+                .Select(m => CalculateMonsterInfluence(view, m, location))
                 .Aggregate(0, Intersect);
         }
 
@@ -81,11 +81,11 @@ namespace SpurRoguelike.PlayerBot
 
             int result;
             if (offsets.Any(o => o.Size() == 1))
-                result = WallInfluenceSeed;
+                result = wallInfluenceSeed;
             else if (offsets.Any(o => o.Size() == 2))
-                result = WallInfluenceSeed/ 2;
+                result = wallInfluenceSeed/ 2;
             else if (offsets.Any(o => o.Size() == 3))
-                result = WallInfluenceSeed/4;
+                result = wallInfluenceSeed/4;
             else
                 result = 1;
 
@@ -95,9 +95,9 @@ namespace SpurRoguelike.PlayerBot
             return result;
         }
 
-        private static int CalculateMonsterInfluence(PawnView monster, Location location)
+        private static int CalculateMonsterInfluence(LevelView levelView, PawnView monster, Location location)
         {
-            var seed = MonsterInfluenceSeed;
+            var seed = levelView.Monsters.Count() == 1 ? 2 : monsterInfluenceSeed;
             if (monster.Location.IsInRange(location, 1))
             {
                 return seed;

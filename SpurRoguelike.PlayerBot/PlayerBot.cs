@@ -100,12 +100,12 @@ namespace SpurRoguelike.PlayerBot
 
         private Turn MoveToExit(LevelView levelView, IMessageReporter reporter)
         {
-            if (levelView.Monsters.Any())
-            {
-                automatonOfBotState.PopAction();
-                automatonOfBotState.PushAction(Fight);
-                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
-            }
+            //if (levelView.Monsters.Any())
+            //{
+            //    automatonOfBotState.PopAction();
+            //    automatonOfBotState.PushAction(Fight);
+            //    return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
+            //}
             if (!levelView.HealthPacks.Any() || levelView.Player.Health == 100)
             {
                 //MoveToExit
