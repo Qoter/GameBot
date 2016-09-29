@@ -67,11 +67,11 @@ namespace SpurRoguelike.PlayerBot
             var upWall = Enumerable.Range(0, 50)
                     .Select(deltaY => new Location(location.X, location.Y - deltaY))
                     .First(loc => view.Field[loc] == CellType.Wall);
-            
+
             var downWall = Enumerable.Range(0, 50)
                     .Select(deltaY => new Location(location.X, location.Y + deltaY))
                     .First(loc => view.Field[loc] == CellType.Wall);
-            var walls = new[] {rightWall, leftWall, upWall, downWall};
+            var walls = new[] { rightWall, leftWall, upWall, downWall };
             var offsets = walls.Select(wall => wall - location);
 
             var leftRight = leftWall - rightWall;
@@ -83,15 +83,15 @@ namespace SpurRoguelike.PlayerBot
             if (offsets.Any(o => o.Size() == 1))
                 result = wallInfluenceSeed;
             else if (offsets.Any(o => o.Size() == 2))
-                result = wallInfluenceSeed/ 2;
+                result = wallInfluenceSeed / 2;
             else if (offsets.Any(o => o.Size() == 3))
-                result = wallInfluenceSeed/4;
+                result = wallInfluenceSeed / 4;
             else
                 result = 1;
 
             if (min < 4)
                 result += 100;
-    
+
             return result;
         }
 
@@ -117,7 +117,7 @@ namespace SpurRoguelike.PlayerBot
 
         private static int Reduce(int value)
         {
-            return value/2;
+            return value / 2;
         }
 
         private static int Intersect(int value1, int value2)
