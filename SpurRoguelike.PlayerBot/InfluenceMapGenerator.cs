@@ -7,7 +7,7 @@ namespace SpurRoguelike.PlayerBot
 {
     internal class InfluenceMapGenerator
     {
-        private static int monsterInfluenceSeed = 30;
+        private static int monsterInfluenceSeed = 42;
 
         public static int[,] Generate(LevelView levelView)
         {
