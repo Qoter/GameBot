@@ -3,7 +3,7 @@ using SpurRoguelike.Core.Primitives;
 
 namespace SpurRoguelike.PlayerBot
 {
-    public class LocationWithPriority : IComparable<LocationWithPriority>
+    internal class LocationWithPriority : IComparable<LocationWithPriority>
     {
         public readonly Location Location;
         public readonly int Priority;

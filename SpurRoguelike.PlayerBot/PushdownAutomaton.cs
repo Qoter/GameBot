@@ -5,7 +5,7 @@ using SpurRoguelike.Core.Views;
 
 namespace SpurRoguelike.PlayerBot
 {
-    public class PushdownAutomaton
+    internal class PushdownAutomaton
     {
         private readonly Stack<Func<LevelView, Turn>> stackOfAction = new Stack<Func<LevelView, Turn>>();
 

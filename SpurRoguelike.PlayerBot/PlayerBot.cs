@@ -43,8 +43,8 @@ namespace SpurRoguelike.PlayerBot
             }
 
             hasBestItem = false;
-            var pathToBestItem = PathHelper.FindShortestPath(levelView, levelView.Player.Location, loc => loc == bestItem.Location);
-            return PathHelper.GetFirstTurn(pathToBestItem);
+            var pathToBestItem = PathFinder.FindShortestPath(levelView, levelView.Player.Location, loc => loc == bestItem.Location);
+            return PathFinder.GetFirstTurn(pathToBestItem);
         }
 
         private Turn Fight(LevelView levelView)
@@ -104,11 +104,11 @@ namespace SpurRoguelike.PlayerBot
 
         private static Turn MakeApproachTurn(LevelView levelView)
         {
-            var pathToMonster = PathHelper.FindShortestPath(levelView, levelView.Player.Location, 
+            var pathToMonster = PathFinder.FindShortestPath(levelView, levelView.Player.Location, 
                 location => GetCountMonstersOnAttackRange(levelView, location) > 0);
 
             if (pathToMonster != null)
-                return PathHelper.GetFirstTurn(pathToMonster);
+                return PathFinder.GetFirstTurn(pathToMonster);
 
             Func<Location, bool> targerFuncWithItemsAndHealth =
                 location =>
@@ -116,8 +116,8 @@ namespace SpurRoguelike.PlayerBot
                     levelView.GetItemAt(location).HasValue ||
                     levelView.Monsters.Any(m => m.Location.IsInRange(location, 1));
 
-            var notSafyPath = PathHelper.FindShortestPath(levelView, levelView.Player.Location,targerFuncWithItemsAndHealth);
-            return PathHelper.GetFirstTurn(notSafyPath);
+            var notSafyPath = PathFinder.FindShortestPath(levelView, levelView.Player.Location,targerFuncWithItemsAndHealth);
+            return PathFinder.GetFirstTurn(notSafyPath);
         }
 
         private Turn CollectHealth(LevelView levelView)
@@ -136,13 +136,13 @@ namespace SpurRoguelike.PlayerBot
             var useNotSafyPath = levelView.Monsters.Count() <= 3;
             if (useNotSafyPath)
             {
-                var path = PathHelper.FindShortestPath(levelView, levelView.Player.Location, loc => levelView.GetHealthPackAt(loc).HasValue);
-                return PathHelper.GetFirstTurn(path);
+                var path = PathFinder.FindShortestPath(levelView, levelView.Player.Location, loc => levelView.GetHealthPackAt(loc).HasValue);
+                return PathFinder.GetFirstTurn(path);
             }
 
             var influenceMap = InfluenceMapGenerator.Generate(levelView);
-            var pathToNearestHealth = PathHelper.FindShortestPathWithInfluenceMap(levelView, influenceMap, levelView.Player.Location, loc => levelView.GetHealthPackAt(loc).HasValue);
-            return PathHelper.GetFirstTurn(pathToNearestHealth);
+            var pathToNearestHealth = PathFinder.FindShortestPathWithInfluenceMap(levelView, influenceMap, levelView.Player.Location, loc => levelView.GetHealthPackAt(loc).HasValue);
+            return PathFinder.GetFirstTurn(pathToNearestHealth);
         }
 
         private Turn MoveToExit(LevelView levelView)
@@ -167,8 +167,8 @@ namespace SpurRoguelike.PlayerBot
         private static Turn MakeMoveToExitTurn(LevelView levelView)
         {
             var exitLocation = GetExitLocation(levelView);
-            var pathToExit = PathHelper.FindShortestPath(levelView, levelView.Player.Location, loc => loc == exitLocation);
-            return PathHelper.GetFirstTurn(pathToExit);
+            var pathToExit = PathFinder.FindShortestPath(levelView, levelView.Player.Location, loc => loc == exitLocation);
+            return PathFinder.GetFirstTurn(pathToExit);
         }
 
         private static Location GetExitLocation(LevelView levelView)

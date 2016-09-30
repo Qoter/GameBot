@@ -48,11 +48,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="InfluenceMapGenerator.cs" />
-    <Compile Include="HtmlGenerator.cs" />
     <Compile Include="FieldViewExtensions.cs" />
     <Compile Include="LocationWithPriority.cs" />
     <Compile Include="OffsetExtensions.cs" />
-    <Compile Include="PathHelper.cs" />
+    <Compile Include="PathFinder.cs" />
     <Compile Include="PlayerBot.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PushdownAutomaton.cs" />

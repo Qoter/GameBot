@@ -5,9 +5,9 @@ using SpurRoguelike.Core.Views;
 
 namespace SpurRoguelike.PlayerBot
 {
-    public class InfluenceMapGenerator
+    internal class InfluenceMapGenerator
     {
-        private static int monsterInfluenceSeed = 25;
+        private static int monsterInfluenceSeed = 30;
 
         public static int[,] Generate(LevelView levelView)
         {

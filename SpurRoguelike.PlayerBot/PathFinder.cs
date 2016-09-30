@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Mail;
 using SpurRoguelike.Core.Primitives;
 using SpurRoguelike.Core.Views;
 
 namespace SpurRoguelike.PlayerBot
 {
-    internal class PathHelper
+    internal class PathFinder
     {
 
         public static List<Location> FindShortestPath(LevelView levelView, Location from, Func<Location, bool> isTarget)
@@ -55,23 +54,23 @@ namespace SpurRoguelike.PlayerBot
 
             while (notOpened.Any())
             {
-                var currentLocation = notOpened.Min;
-                notOpened.Remove(currentLocation);
+                var toOpen = notOpened.Min;
+                notOpened.Remove(toOpen);
 
-                if (currentLocation.Priority == int.MaxValue)
+                if (toOpen.Priority == int.MaxValue)
                     return null;
-                if (isTarget(currentLocation.Location))
-                    return CreatePath(from, currentLocation.Location, previous);
+                if (isTarget(toOpen.Location))
+                    return CreatePath(from, toOpen.Location, previous);
 
-                foreach (var adjacentLocation in GetAdjacentLocations(currentLocation.Location, levelView).Where(l => IsPassable(l, levelView) || isTarget(l)))
+                foreach (var adjacentLocation in GetAdjacentLocations(toOpen.Location, levelView).Where(l => IsPassable(l, levelView) || isTarget(l)))
                 {
-                    var currentDistance = currentLocation.Priority + influenceMap[adjacentLocation.X, adjacentLocation.Y];
+                    var currentDistance = toOpen.Priority + influenceMap[adjacentLocation.X, adjacentLocation.Y];
                     if (!previous.ContainsKey(adjacentLocation) || currentDistance < distances[adjacentLocation])
                     {
                         notOpened.Remove(new LocationWithPriority(adjacentLocation, distances[adjacentLocation]));
                         distances[adjacentLocation] = currentDistance;
                         notOpened.Add(new LocationWithPriority(adjacentLocation, currentDistance));
-                        previous[adjacentLocation] = currentLocation.Location;
+                        previous[adjacentLocation] = toOpen.Location;
                     }
                 }
             }
@@ -89,6 +88,14 @@ namespace SpurRoguelike.PlayerBot
             return path;
         }
 
+        public static Turn GetFirstTurn(List<Location> path)
+        {
+            if (path == null || path.Count < 2)
+                return Turn.None;
+            var stepOffset = path[1] - path[0];
+            return Turn.Step(stepOffset);
+        }
+
         private static IEnumerable<Location> GetAdjacentLocations(Location location, LevelView levelView)
         {
             return Offset.StepOffsets.Select(offset => location + offset);
@@ -104,14 +111,6 @@ namespace SpurRoguelike.PlayerBot
 
             return levelView.Field[location] == CellType.Empty ||
                    levelView.Field[location] == CellType.PlayerStart;
-        }
-
-        public static Turn GetFirstTurn(List<Location> path)
-        {
-            if (path == null || path.Count < 2)
-                return Turn.None;
-            var stepOffset = path[1] - path[0];
-            return Turn.Step(stepOffset);
         }
     }
 }
