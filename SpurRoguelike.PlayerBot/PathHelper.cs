@@ -9,6 +9,7 @@ namespace SpurRoguelike.PlayerBot
 {
     internal class PathHelper
     {
+
         public static List<Location> FindShortestPath(LevelView levelView, Location from, Func<Location, bool> isTarget)
         { 
             var queue = new Queue<Location>();
@@ -36,53 +37,45 @@ namespace SpurRoguelike.PlayerBot
 
         public static List<Location> FindShortestPathWithInfluenceMap(LevelView levelView, int[,] influenceMap, Location from, Func<Location, bool> isTarget)
         {
-            var notOpened = new HashSet<Location>();
+            var notOpened = new SortedSet<LocationWithPriority>();
             var distances = new Dictionary<Location, int>();
             var previous = new Dictionary<Location, Location> {[from] = default(Location)};
 
             foreach (var location in levelView.Field.GetAllLocations())
             {
-                if (IsPassable(location, levelView) || isTarget(location))
+                if ((IsPassable(location, levelView) || isTarget(location)) && location != from)
                 {
                     distances[location] = int.MaxValue;
-                    notOpened.Add(location);
+                    notOpened.Add(new LocationWithPriority(location, int.MaxValue));
                 }
             }
 
             distances[from] = 0;
+            notOpened.Add(new LocationWithPriority(from, 0));
 
             while (notOpened.Any())
             {
-                var currentLocation = GetMinLocation(notOpened, distances);
+                var currentLocation = notOpened.Min;
                 notOpened.Remove(currentLocation);
 
-                if (distances[currentLocation] == int.MaxValue)
+                if (currentLocation.Priority == int.MaxValue)
                     return null;
-                if (isTarget(currentLocation))
-                    return CreatePath(from, currentLocation, previous);
+                if (isTarget(currentLocation.Location))
+                    return CreatePath(from, currentLocation.Location, previous);
 
-                foreach (var adjacentLocation in GetAdjacentLocations(currentLocation, levelView).Where(l => IsPassable(l, levelView) || isTarget(l)))
+                foreach (var adjacentLocation in GetAdjacentLocations(currentLocation.Location, levelView).Where(l => IsPassable(l, levelView) || isTarget(l)))
                 {
-                    var currentDistance = distances[currentLocation] + influenceMap[adjacentLocation.X, adjacentLocation.Y];
+                    var currentDistance = currentLocation.Priority + influenceMap[adjacentLocation.X, adjacentLocation.Y];
                     if (!previous.ContainsKey(adjacentLocation) || currentDistance < distances[adjacentLocation])
                     {
+                        notOpened.Remove(new LocationWithPriority(adjacentLocation, distances[adjacentLocation]));
                         distances[adjacentLocation] = currentDistance;
-                        previous[adjacentLocation] = currentLocation;
+                        notOpened.Add(new LocationWithPriority(adjacentLocation, currentDistance));
+                        previous[adjacentLocation] = currentLocation.Location;
                     }
                 }
             }
             return null;
-        }
-
-        private static Location GetMinLocation(HashSet<Location> locations, Dictionary<Location, int> locationToDistance)
-        {
-            var min = locations.First();
-            foreach (var location in locations)
-            {
-                if (locationToDistance[location] < locationToDistance[min])
-                    min = location;
-            }
-            return min;
         }
 
         private static List<Location> CreatePath(Location from, Location to, Dictionary<Location, Location> previous)

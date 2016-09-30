@@ -10,7 +10,7 @@ namespace SpurRoguelike.PlayerBot
     public class PlayerBot : IPlayerController
     {
         private readonly PushdownAutomaton automatonOfBotState;
-        private const int EndFightHealthLimit = 65;
+        private int EndFightHealthLimit = 65;
         private const int EndCollectHealthLimit = 100;
 
         private bool hasBestItem = false;
@@ -28,17 +28,17 @@ namespace SpurRoguelike.PlayerBot
             {
                 //Stop for debug
             }
-            //messageReporter.ReportMessage(automatonOfBotState.CurrentAction.Method.Name);
+            messageReporter.ReportMessage(automatonOfBotState.CurrentAction.Method.Name);
             return automatonOfBotState.CurrentAction.Invoke(levelView, messageReporter);
         }
 
-        private int GetItemConst(ItemView item)
+        private static int GetItemConst(ItemView item)
         {
-            return item.AttackBonus*5 + item.DefenceBonus*2;
+            return item.AttackBonus*2 + item.DefenceBonus*3;
         }
 
 
-        private ItemView FindBestItem(IEnumerable<ItemView> items)
+        private static ItemView FindBestItem(IEnumerable<ItemView> items)
         {
             var bestItem = new ItemView();
             foreach (var item in items)
@@ -71,6 +71,7 @@ namespace SpurRoguelike.PlayerBot
 
         private Turn Fight(LevelView levelView, IMessageReporter reporter)
         {
+            EndFightHealthLimit = levelView.Monsters.Count() == 1 ? 50 : 65;
             if (levelView.Player.Health < EndFightHealthLimit && levelView.HealthPacks.Any()) // Collect health if health low
             {
                 automatonOfBotState.PushAction(CollectHealth);
@@ -116,7 +117,11 @@ namespace SpurRoguelike.PlayerBot
                 return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
             }
 
-            var pathToNearestMonstar = PathHelper.FindShortestPath(levelView, levelView.Player.Location, loc => levelView.GetMonsterAt(loc).HasValue);
+            var pathToNearestMonstar = PathHelper.FindShortestPath(levelView, levelView.Player.Location, loc => levelView.Monsters.Any(m => m.Location.IsInRange(loc, 1))) ??
+                                       PathHelper.FindShortestPath(levelView, levelView.Player.Location,
+                loc =>
+                    levelView.GetHealthPackAt(loc).HasValue || levelView.GetItemAt(loc).HasValue ||
+                    levelView.Monsters.Any(m => m.Location.IsInRange(loc, 1)));
             return PathHelper.GetFirstTurn(pathToNearestMonstar);
         }
 
@@ -146,7 +151,7 @@ namespace SpurRoguelike.PlayerBot
         {
             if (levelView.Monsters.Any())
             {
-                //Fighth if move from previous level
+                //Fight if move from previous level
                 hasBestItem = false;
                 automatonOfBotState.PopAction();
                 automatonOfBotState.PushAction(Fight);
