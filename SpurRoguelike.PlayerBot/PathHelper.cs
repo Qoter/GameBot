@@ -89,19 +89,13 @@ namespace SpurRoguelike.PlayerBot
             return path;
         }
 
-        public static IEnumerable<Location> GetAdjacentLocations(Location location, LevelView levelView)
+        private static IEnumerable<Location> GetAdjacentLocations(Location location, LevelView levelView)
         {
             return Offset.StepOffsets.Select(offset => location + offset);
         }
 
-        public static bool IsPassable(Location location, LevelView levelView)
+        private static bool IsPassable(Location location, LevelView levelView)
         {
-            if (location.X < 0 ||
-                location.Y < 0 ||
-                location.X >= levelView.Field.Width || 
-                location.Y >= levelView.Field.Height)
-                return false;
-
             if (levelView.GetMonsterAt(location).HasValue)
                 return false;
 

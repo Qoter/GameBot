@@ -49,8 +49,9 @@
   <ItemGroup>
     <Compile Include="InfluenceMapGenerator.cs" />
     <Compile Include="HtmlGenerator.cs" />
-    <Compile Include="LevelViewExtnensions.cs" />
+    <Compile Include="FieldViewExtensions.cs" />
     <Compile Include="LocationWithPriority.cs" />
+    <Compile Include="OffsetExtensions.cs" />
     <Compile Include="PathHelper.cs" />
     <Compile Include="PlayerBot.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -4,7 +4,7 @@ using SpurRoguelike.Core.Views;
 
 namespace SpurRoguelike.PlayerBot
 {
-    public static class LevelViewExtnensions
+    public static class FieldViewExtensions
     {
         public static IEnumerable<Location> GetAllLocations(this FieldView field)
         {
@@ -15,6 +15,12 @@ namespace SpurRoguelike.PlayerBot
                     yield return new Location(x, y);
                 }
             }
+        }
+
+        public static bool IsOutOfRange(this FieldView field, Location location)
+        {
+            return location.X < 0 || location.Y < 0 ||
+                   location.X >= field.Width || location.Y >= field.Height;
         }
     }
 }

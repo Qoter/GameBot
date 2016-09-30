@@ -10,9 +10,7 @@ namespace SpurRoguelike.PlayerBot
     public class PlayerBot : IPlayerController
     {
         private readonly PushdownAutomaton automatonOfBotState;
-        private int EndFightHealthLimit = 65;
-        private const int EndCollectHealthLimit = 100;
-
+        private int endFightHealthLimit = 65;
         private bool hasBestItem = false;
 
 
@@ -24,32 +22,11 @@ namespace SpurRoguelike.PlayerBot
 
         public Turn MakeTurn(LevelView levelView, IMessageReporter messageReporter)
         {
-            if (Console.KeyAvailable)
-            {
-                //Stop for debug
-            }
-            messageReporter.ReportMessage(automatonOfBotState.CurrentAction.Method.Name);
-            return automatonOfBotState.CurrentAction.Invoke(levelView, messageReporter);
-        }
-
-        private static int GetItemConst(ItemView item)
-        {
-            return item.AttackBonus*2 + item.DefenceBonus*3;
+            return automatonOfBotState.CurrentAction.Invoke(levelView);
         }
 
 
-        private static ItemView FindBestItem(IEnumerable<ItemView> items)
-        {
-            var bestItem = new ItemView();
-            foreach (var item in items)
-            {
-                if (GetItemConst(bestItem) < GetItemConst(item))
-                    bestItem = item;
-            }
-            return bestItem;
-        }
-
-        private Turn Equip(LevelView levelView, IMessageReporter messageReporter)
+        private Turn Equip(LevelView levelView)
         {
             var bestItem = FindBestItem(levelView.Items);
 
@@ -60,41 +37,40 @@ namespace SpurRoguelike.PlayerBot
             {
                 hasBestItem = true;
                 automatonOfBotState.PopAction();
-                return automatonOfBotState.CurrentAction.Invoke(levelView, messageReporter);
+                return automatonOfBotState.CurrentAction.Invoke(levelView);
             }
 
             hasBestItem = false;
-            var pathToBestItem = PathHelper.FindShortestPath(levelView, levelView.Player.Location,
-                loc => loc == bestItem.Location);
+            var pathToBestItem = PathHelper.FindShortestPath(levelView, levelView.Player.Location, loc => loc == bestItem.Location);
             return PathHelper.GetFirstTurn(pathToBestItem);
         }
 
-        private Turn Fight(LevelView levelView, IMessageReporter reporter)
+        private Turn Fight(LevelView levelView)
         {
-            EndFightHealthLimit = levelView.Monsters.Count() == 1 ? 50 : 65;
-            if (levelView.Player.Health < EndFightHealthLimit && levelView.HealthPacks.Any()) // Collect health if health low
+            endFightHealthLimit = levelView.Monsters.Count() == 1 ? 50 : 65;
+
+            if (levelView.Player.Health < endFightHealthLimit && levelView.HealthPacks.Any())
             {
                 automatonOfBotState.PushAction(CollectHealth);
-                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
+                return automatonOfBotState.CurrentAction.Invoke(levelView);
             }
-
-            if (!levelView.Monsters.Any()) // Move to exit if no monsters
+            if (!levelView.Monsters.Any())
             {
                 automatonOfBotState.PopAction();
                 automatonOfBotState.PushAction(MoveToExit);
-                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
+                return automatonOfBotState.CurrentAction.Invoke(levelView);
             }
 
             if (levelView.Monsters.All(m => !levelView.Player.Location.IsInRange(m.Location, 1))) // all monsters on long distance
             {
                 automatonOfBotState.PushAction(ApproachToMonster);
-                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
+                return automatonOfBotState.CurrentAction.Invoke(levelView);
             }
 
             if (levelView.Monsters.Count() == 1 && !hasBestItem)
             {
                 automatonOfBotState.PushAction(Equip);
-                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
+                return automatonOfBotState.CurrentAction.Invoke(levelView);
             }
 
             //fight
@@ -103,18 +79,23 @@ namespace SpurRoguelike.PlayerBot
             return Turn.Attack(attackOffset);
         }
 
-        private Turn ApproachToMonster(LevelView levelView, IMessageReporter reporter)
+        public int GetCountMonstersOnAttackRange(LevelView levelView)
+        {
+            return levelView.Monsters.Count(m => levelView.Player.Location.IsInRange(m.Location, 1));
+        }
+
+        private Turn ApproachToMonster(LevelView levelView)
         {
             if (levelView.Monsters.Any(m => levelView.Player.Location.IsInRange(m.Location, 1)) || !levelView.Monsters.Any())
             {
                 automatonOfBotState.PopAction();
-                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
+                return automatonOfBotState.CurrentAction.Invoke(levelView);
             }
 
-            if (levelView.Player.Health < EndFightHealthLimit && levelView.HealthPacks.Any())
+            if (levelView.Player.Health < endFightHealthLimit && levelView.HealthPacks.Any())
             {
                 automatonOfBotState.PushAction(CollectHealth);
-                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
+                return automatonOfBotState.CurrentAction.Invoke(levelView);
             }
 
             var pathToNearestMonstar = PathHelper.FindShortestPath(levelView, levelView.Player.Location, loc => levelView.Monsters.Any(m => m.Location.IsInRange(loc, 1))) ??
@@ -126,9 +107,9 @@ namespace SpurRoguelike.PlayerBot
         }
 
 
-        private Turn CollectHealth(LevelView levelView, IMessageReporter reporter)
+        private Turn CollectHealth(LevelView levelView)
         {
-            if (levelView.Player.Health < EndCollectHealthLimit && levelView.HealthPacks.Any())
+            if (levelView.Player.Health < 100 && levelView.HealthPacks.Any())
             {
                 //collect health
                 if (levelView.Monsters.Count() <= 3)
@@ -144,10 +125,10 @@ namespace SpurRoguelike.PlayerBot
             }
 
             automatonOfBotState.PopAction();
-            return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
+            return automatonOfBotState.CurrentAction.Invoke(levelView);
         }
 
-        private Turn MoveToExit(LevelView levelView, IMessageReporter reporter)
+        private Turn MoveToExit(LevelView levelView)
         {
             if (levelView.Monsters.Any())
             {
@@ -155,7 +136,7 @@ namespace SpurRoguelike.PlayerBot
                 hasBestItem = false;
                 automatonOfBotState.PopAction();
                 automatonOfBotState.PushAction(Fight);
-                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
+                return automatonOfBotState.CurrentAction.Invoke(levelView);
             }
             if (!levelView.HealthPacks.Any() || levelView.Player.Health == 100)
             {
@@ -167,13 +148,30 @@ namespace SpurRoguelike.PlayerBot
             }
 
             automatonOfBotState.PushAction(CollectHealth);
-            return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
+            return automatonOfBotState.CurrentAction.Invoke(levelView);
         }
 
-        private Location GetExitLocation(LevelView levelView)
+        private static Location GetExitLocation(LevelView levelView)
         {
             return levelView.Field.GetAllLocations()
                 .FirstOrDefault(loc => levelView.Field[loc] == CellType.Exit);
+        }
+
+        private static int GetItemConst(ItemView item)
+        {
+            return item.AttackBonus * 2 + item.DefenceBonus * 3;
+        }
+
+
+        private static ItemView FindBestItem(IEnumerable<ItemView> items)
+        {
+            var bestItem = new ItemView();
+            foreach (var item in items)
+            {
+                if (GetItemConst(bestItem) < GetItemConst(item))
+                    bestItem = item;
+            }
+            return bestItem;
         }
     }
 }

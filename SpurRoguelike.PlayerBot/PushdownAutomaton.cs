@@ -7,16 +7,16 @@ namespace SpurRoguelike.PlayerBot
 {
     public class PushdownAutomaton
     {
-        private readonly Stack<Func<LevelView, IMessageReporter, Turn>> stackOfAction = new Stack<Func<LevelView, IMessageReporter, Turn>>();
+        private readonly Stack<Func<LevelView, Turn>> stackOfAction = new Stack<Func<LevelView, Turn>>();
 
-        public Func<LevelView, IMessageReporter, Turn> CurrentAction => stackOfAction.Peek();
+        public Func<LevelView, Turn> CurrentAction => stackOfAction.Peek();
 
-        public void PushAction(Func<LevelView, IMessageReporter, Turn> getNextTurn)
+        public void PushAction(Func<LevelView, Turn> getNextTurn)
         {
             stackOfAction.Push(getNextTurn);
         }
 
-        public Func<LevelView, IMessageReporter, Turn> PopAction()
+        public Func<LevelView, Turn> PopAction()
         {
             return stackOfAction.Pop();
         }

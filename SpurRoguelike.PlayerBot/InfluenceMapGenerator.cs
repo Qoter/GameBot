@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using SpurRoguelike.Core.Primitives;
 using SpurRoguelike.Core.Views;
@@ -20,7 +19,6 @@ namespace SpurRoguelike.PlayerBot
                     influenceMap[x, y] = CalculeteInfluence(levelView, x, y);
                 }
             }
-
             return influenceMap;
         }
 
@@ -28,41 +26,37 @@ namespace SpurRoguelike.PlayerBot
         {
             var location = new Location(x, y);
 
-            if (!PathHelper.IsPassable(location, view))
-                return -1;
+            if (!IsPassable(view, location))
+                return int.MaxValue;
 
             var baseInfluence = CalculateBaseInfluence(view, location);
 
             return baseInfluence + view.Monsters
-                .Select(m => CalculateMonsterInfluence(view, m, location))
+                .Select(m => CalculateMonsterInfluence( m, location))
                 .Aggregate(0, (i, j) => i + j);
         }
 
         public static int CalculateBaseInfluence(LevelView levelView, Location location)
         {
-            var around = Offset.StepOffsets.SelectMany(offset => new[]
-            {
-                location + offset,
-                location + offset + offset + offset,
-                location +  offset + offset + offset + offset + offset
-            });
-            return around.Count(loc => !IsPassable(levelView, loc))*3 + 1;
+            var multipliers = new[] {1, 3, 5};
+            var aroundLocations = Offset.StepOffsets
+                .SelectMany(offset => multipliers.Select(x => offset.Multiply(x)))
+                .Select(offset => location + offset);
+            return aroundLocations.Count(loc => !IsPassable(levelView, loc))*3 + 1;
         }
 
-        public static bool IsPassable(LevelView levelView, Location location)
+        private static bool IsPassable(LevelView levelView, Location location)
         {
-            if (location.X < 0 ||
-                location.Y < 0 ||
-                location.X >= levelView.Field.Width ||
-                location.Y >= levelView.Field.Height)
+            if (levelView.Field.IsOutOfRange(location))
                 return false;
 
-            return levelView.Field[location] != CellType.Wall && levelView.Field[location] != CellType.Trap &&
+            return levelView.Field[location] != CellType.Wall &&
+                   levelView.Field[location] != CellType.Trap &&
                    !levelView.GetItemAt(location).HasValue;
 
         }
 
-        private static int CalculateMonsterInfluence(LevelView levelView, PawnView monster, Location location)
+        private static int CalculateMonsterInfluence(PawnView monster, Location location)
         {
             if (monster.Location.IsInRange(location, 1))
                 return monsterInfluenceSeed;
