@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using SpurRoguelike.Core.Primitives;
 using SpurRoguelike.Core.Views;
@@ -7,7 +8,7 @@ namespace SpurRoguelike.PlayerBot
 {
     public class InfluenceMapGenerator
     {
-        private static int monsterInfluenceSeed = 16;
+        private static int monsterInfluenceSeed = 32;
         private static int wallInfluenceSeed = 20;
 
         public static int[,] Generate(LevelView levelView)
@@ -32,67 +33,32 @@ namespace SpurRoguelike.PlayerBot
         private static int CalculeteInfluence(LevelView view, int x, int y)
         {
             var location = new Location(x, y);
-            var cell = view.Field[location];
-            var baseInfluence = CalculateBaseInfluence(view, x, y);
-
-            /*
-            if (cell == CellType.Wall || cell == CellType.Exit || cell == CellType.Trap || view.Monsters.Any(m => m.Location == location))
-            {
-                return -1;
-            }*/
-
-            if (!baseInfluence.HasValue)
+            if (!PathHelper.IsPassable(location, view))
                 return -1;
 
-            return baseInfluence.Value + view.Monsters
+            var baseInfluence = CalculateBaseInfluence(view, location);
+
+            return baseInfluence + view.Monsters
                 .Select(m => CalculateMonsterInfluence(view, m, location))
                 .Aggregate(0, Intersect);
         }
 
-        private static int? CalculateBaseInfluence(LevelView view, int x, int y)
+        public static int CalculateBaseInfluence(LevelView levelView, Location location)
         {
-            var location = new Location(x, y);
-            var cell = view.Field[location];
-            if (cell == CellType.Wall || cell == CellType.Trap)
-                return null;
+            var around = Offset.AttackOffsets.SelectMany(offset => new[] {location + offset, location + offset + offset});
+            return around.Count(loc => !IsPassable(levelView, loc)) * 10 + 1;
+        }
 
-            var rightWall = Enumerable.Range(0, 50)
-                    .Select(deltaX => new Location(location.X + deltaX, location.Y))
-                    .First(loc => view.Field[loc] == CellType.Wall);
+        public static bool IsPassable(LevelView levelView, Location location)
+        {
+            if (location.X < 0 ||
+                location.Y < 0 ||
+                location.X >= levelView.Field.Width ||
+                location.Y >= levelView.Field.Height)
+                return false;
 
-            var leftWall = Enumerable.Range(0, 50)
-                    .Select(deltaX => new Location(location.X - deltaX, location.Y))
-                    .First(loc => view.Field[loc] == CellType.Wall);
+            return levelView.Field[location] != CellType.Wall;
 
-            var upWall = Enumerable.Range(0, 50)
-                    .Select(deltaY => new Location(location.X, location.Y - deltaY))
-                    .First(loc => view.Field[loc] == CellType.Wall);
-
-            var downWall = Enumerable.Range(0, 50)
-                    .Select(deltaY => new Location(location.X, location.Y + deltaY))
-                    .First(loc => view.Field[loc] == CellType.Wall);
-            var walls = new[] { rightWall, leftWall, upWall, downWall };
-            var offsets = walls.Select(wall => wall - location);
-
-            var leftRight = leftWall - rightWall;
-            var upDown = upWall - downWall;
-
-            var min = Math.Min(leftRight.Size(), upDown.Size());
-
-            int result;
-            if (offsets.Any(o => o.Size() == 1))
-                result = wallInfluenceSeed;
-            else if (offsets.Any(o => o.Size() == 2))
-                result = wallInfluenceSeed / 2;
-            else if (offsets.Any(o => o.Size() == 3))
-                result = wallInfluenceSeed / 4;
-            else
-                result = 1;
-
-            if (min < 4)
-                result += 100;
-
-            return result;
         }
 
         private static int CalculateMonsterInfluence(LevelView levelView, PawnView monster, Location location)
@@ -104,7 +70,8 @@ namespace SpurRoguelike.PlayerBot
             }
 
             var offset = monster.Location - location;
-            var range = offset.Size();//Math.Max(Math.Abs(offset.XOffset), Math.Abs(offset.YOffset));
+
+            var range = offset.Size();
 
             var value = seed;
             for (var i = 0; i < range - 1; i++)

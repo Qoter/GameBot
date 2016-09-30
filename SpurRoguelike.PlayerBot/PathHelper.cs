@@ -9,7 +9,7 @@ namespace SpurRoguelike.PlayerBot
 {
     internal class PathHelper
     {
-        public static List<Location> FindShortestPath(LevelView levelView, Location from, Func<Location, LevelView, bool> isTarget)
+        public static List<Location> FindShortestPath(LevelView levelView, Location from, Func<Location, bool> isTarget)
         { 
             var queue = new Queue<Location>();
             queue.Enqueue(from);
@@ -19,16 +19,15 @@ namespace SpurRoguelike.PlayerBot
             {
                 var currentLocation = queue.Dequeue();
                 var nextLocations = GetAdjacentLocations(currentLocation, levelView)
-                    .Where(l => IsPassable(l, levelView) || isTarget(l, levelView))
-                    .Where(l => !previous.ContainsKey(l))
-                    .Where(l => !levelView.GetHealthPackAt(l).HasValue);
+                    .Where(l => (IsPassable(l, levelView) && !levelView.GetHealthPackAt(l).HasValue) || isTarget(l))
+                    .Where(l => !previous.ContainsKey(l));
 
                 foreach (var nextLocation in nextLocations)
                 {
                     previous[nextLocation] = currentLocation;
                     queue.Enqueue(nextLocation);
 
-                    if (isTarget(nextLocation, levelView))
+                    if (isTarget(nextLocation))
                         return CreatePath(from, nextLocation, previous);
                 }
             }
@@ -37,72 +36,53 @@ namespace SpurRoguelike.PlayerBot
 
         public static List<Location> FindShortestPathWithInfluenceMap(LevelView levelView, int[,] influenceMap, Location from, Func<Location, bool> isTarget)
         {
-            var forOpen = new HashSet<Location>();
-            var dist = new Dictionary<Location, int>();
-            var prev = new Dictionary<Location, Location>();
+            var notOpened = new HashSet<Location>();
+            var distances = new Dictionary<Location, int>();
+            var previous = new Dictionary<Location, Location> {[from] = default(Location)};
 
-            for (int x = 0; x < levelView.Field.Width; x++)
+            foreach (var location in levelView.Field.GetAllLocations())
             {
-                for (int y = 0; y < levelView.Field.Height; y++)
+                if (IsPassable(location, levelView) || isTarget(location))
                 {
-                    var v = new Location(x, y);
-                    if (IsPassable(v, levelView) || isTarget(v))
-                    {
-                        dist[v] = int.MaxValue;
-                        prev[v] = default(Location);
-                        forOpen.Add(v);
-                    }
+                    distances[location] = int.MaxValue;
+                    notOpened.Add(location);
                 }
             }
 
-            dist[from] = 0;
+            distances[from] = 0;
 
-            while (forOpen.Any())
+            while (notOpened.Any())
             {
-                var u = GetLocationWithMinDist(forOpen, dist);
-                forOpen.Remove(u);
+                var currentLocation = GetMinLocation(notOpened, distances);
+                notOpened.Remove(currentLocation);
 
-                foreach (var v in GetAdjacentLocations(u, levelView).Where(l => IsPassable(l, levelView) || isTarget(l)))
+                if (distances[currentLocation] == int.MaxValue)
+                    return null;
+                if (isTarget(currentLocation))
+                    return CreatePath(from, currentLocation, previous);
+
+                foreach (var adjacentLocation in GetAdjacentLocations(currentLocation, levelView).Where(l => IsPassable(l, levelView) || isTarget(l)))
                 {
-                    if (influenceMap[v.X, v.Y] == -1)
+                    var currentDistance = distances[currentLocation] + influenceMap[adjacentLocation.X, adjacentLocation.Y];
+                    if (!previous.ContainsKey(adjacentLocation) || currentDistance < distances[adjacentLocation])
                     {
-                        throw new IndexOutOfRangeException();
+                        distances[adjacentLocation] = currentDistance;
+                        previous[adjacentLocation] = currentLocation;
                     }
-                    if (dist[u] == int.MaxValue)
-                    {
-                        dist[v] = influenceMap[v.X, v.Y];
-                        prev[v] = u;
-                    }
-                    else
-                    {
-                        var alt = dist[u] + influenceMap[v.X, v.Y];
-                        if (alt < dist[v])
-                        {
-                            dist[v] = alt;
-                            prev[v] = u;
-                        }
-                    }
-
-                }
-
-                if (isTarget(u))
-                {
-                    return CreatePath(from, u, prev);
                 }
             }
-
             return null;
         }
 
-        private static Location GetLocationWithMinDist(HashSet<Location> q, Dictionary<Location, int> dist)
+        private static Location GetMinLocation(HashSet<Location> locations, Dictionary<Location, int> locationToDistance)
         {
-            var minLoc = q.First();
-            foreach (var location in q)
+            var min = locations.First();
+            foreach (var location in locations)
             {
-                if (dist[location] < dist[minLoc])
-                    minLoc = location;
+                if (locationToDistance[location] < locationToDistance[min])
+                    min = location;
             }
-            return minLoc;
+            return min;
         }
 
         private static List<Location> CreatePath(Location from, Location to, Dictionary<Location, Location> previous)
@@ -123,7 +103,16 @@ namespace SpurRoguelike.PlayerBot
 
         public static bool IsPassable(Location location, LevelView levelView)
         {
-            if (levelView.Monsters.Any(m => m.Location == location))
+            if (location.X < 0 ||
+                location.Y < 0 ||
+                location.X >= levelView.Field.Width || 
+                location.Y >= levelView.Field.Height)
+                return false;
+
+            if (levelView.GetMonsterAt(location).HasValue)
+                return false;
+
+            if (levelView.GetItemAt(location).HasValue)
                 return false;
 
             return levelView.Field[location] == CellType.Empty ||

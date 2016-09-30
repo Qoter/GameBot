@@ -13,6 +13,8 @@ namespace SpurRoguelike.PlayerBot
         private const int EndFightHealthLimit = 65;
         private const int EndCollectHealthLimit = 100;
 
+        private bool hasBestItem = false;
+
 
         public PlayerBot()
         {
@@ -22,17 +24,50 @@ namespace SpurRoguelike.PlayerBot
 
         public Turn MakeTurn(LevelView levelView, IMessageReporter messageReporter)
         {
-            //Thread.Sleep(50);
-            //var costs = InfluenceMapGenerator.Generate(levelView);
-            //HtmlGenerator.WriteHtml(levelView, costs);
             if (Console.KeyAvailable)
             {
                 //Stop for debug
             }
-            messageReporter.ReportMessage(automatonOfBotState.CurrentAction.Method.Name);
+            //messageReporter.ReportMessage(automatonOfBotState.CurrentAction.Method.Name);
             return automatonOfBotState.CurrentAction.Invoke(levelView, messageReporter);
         }
 
+        private int GetItemConst(ItemView item)
+        {
+            return item.AttackBonus*5 + item.DefenceBonus*2;
+        }
+
+
+        private ItemView FindBestItem(IEnumerable<ItemView> items)
+        {
+            var bestItem = new ItemView();
+            foreach (var item in items)
+            {
+                if (GetItemConst(bestItem) < GetItemConst(item))
+                    bestItem = item;
+            }
+            return bestItem;
+        }
+
+        private Turn Equip(LevelView levelView, IMessageReporter messageReporter)
+        {
+            var bestItem = FindBestItem(levelView.Items);
+
+            ItemView playerItem;
+            levelView.Player.TryGetEquippedItem(out playerItem);
+
+            if (GetItemConst(bestItem) <= GetItemConst(playerItem))
+            {
+                hasBestItem = true;
+                automatonOfBotState.PopAction();
+                return automatonOfBotState.CurrentAction.Invoke(levelView, messageReporter);
+            }
+
+            hasBestItem = false;
+            var pathToBestItem = PathHelper.FindShortestPath(levelView, levelView.Player.Location,
+                loc => loc == bestItem.Location);
+            return PathHelper.GetFirstTurn(pathToBestItem);
+        }
 
         private Turn Fight(LevelView levelView, IMessageReporter reporter)
         {
@@ -52,6 +87,12 @@ namespace SpurRoguelike.PlayerBot
             if (levelView.Monsters.All(m => !levelView.Player.Location.IsInRange(m.Location, 1))) // all monsters on long distance
             {
                 automatonOfBotState.PushAction(ApproachToMonster);
+                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
+            }
+
+            if (levelView.Monsters.Count() == 1 && !hasBestItem)
+            {
+                automatonOfBotState.PushAction(Equip);
                 return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
             }
 
@@ -75,9 +116,7 @@ namespace SpurRoguelike.PlayerBot
                 return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
             }
 
-
-            var monstersLocations = new HashSet<Location>(levelView.Monsters.Select(m => m.Location));
-            var pathToNearestMonstar = PathHelper.FindShortestPath(levelView, levelView.Player.Location, (loc, _) => monstersLocations.Contains(loc));
+            var pathToNearestMonstar = PathHelper.FindShortestPath(levelView, levelView.Player.Location, loc => levelView.GetMonsterAt(loc).HasValue);
             return PathHelper.GetFirstTurn(pathToNearestMonstar);
         }
 
@@ -87,10 +126,15 @@ namespace SpurRoguelike.PlayerBot
             if (levelView.Player.Health < EndCollectHealthLimit && levelView.HealthPacks.Any())
             {
                 //collect health
-                var healthLocations = new HashSet<Location>(levelView.HealthPacks.Select(hp => hp.Location));
+                if (levelView.Monsters.Count() <= 3)
+                {
+                    var path = PathHelper.FindShortestPath(levelView, levelView.Player.Location,
+                        loc => levelView.GetHealthPackAt(loc).HasValue);
+                    return PathHelper.GetFirstTurn(path);
+                }
                 var cost = InfluenceMapGenerator.Generate(levelView);
                 var pathToNearestHealth = PathHelper.FindShortestPathWithInfluenceMap(levelView, cost, levelView.Player.Location,
-                    loc => healthLocations.Contains(loc));
+                    loc => levelView.GetHealthPackAt(loc).HasValue);
                 return PathHelper.GetFirstTurn(pathToNearestHealth);
             }
 
@@ -100,37 +144,31 @@ namespace SpurRoguelike.PlayerBot
 
         private Turn MoveToExit(LevelView levelView, IMessageReporter reporter)
         {
-            //if (levelView.Monsters.Any())
-            //{
-            //    automatonOfBotState.PopAction();
-            //    automatonOfBotState.PushAction(Fight);
-            //    return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
-            //}
+            if (levelView.Monsters.Any())
+            {
+                //Fighth if move from previous level
+                hasBestItem = false;
+                automatonOfBotState.PopAction();
+                automatonOfBotState.PushAction(Fight);
+                return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
+            }
             if (!levelView.HealthPacks.Any() || levelView.Player.Health == 100)
             {
                 //MoveToExit
                 var exitLocation = GetExitLocation(levelView);
                 var pathToExit = PathHelper.FindShortestPath(levelView, levelView.Player.Location,
-                    (loc, _) => loc == exitLocation);
+                    loc => loc == exitLocation);
                 return PathHelper.GetFirstTurn(pathToExit);
             }
 
-            //
             automatonOfBotState.PushAction(CollectHealth);
             return automatonOfBotState.CurrentAction.Invoke(levelView, reporter);
         }
 
         private Location GetExitLocation(LevelView levelView)
         {
-            for (int x = 0; x < levelView.Field.Width; x++)
-            {
-                for (int y = 0; y < levelView.Field.Height; y++)
-                {
-                    if (levelView.Field[new Location(x, y)] == CellType.Exit)
-                        return new Location(x, y);
-                }
-            }
-            return default(Location);
+            return levelView.Field.GetAllLocations()
+                .FirstOrDefault(loc => levelView.Field[loc] == CellType.Exit);
         }
     }
 }
