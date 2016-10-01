@@ -47,7 +47,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="InfluenceMapGenerator.cs" />
+    <Compile Include="InfluenceMap.cs" />
     <Compile Include="FieldViewExtensions.cs" />
     <Compile Include="LocationWithPriority.cs" />
     <Compile Include="OffsetExtensions.cs" />

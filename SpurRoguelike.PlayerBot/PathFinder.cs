@@ -8,7 +8,6 @@ namespace SpurRoguelike.PlayerBot
 {
     internal class PathFinder
     {
-
         public static List<Location> FindShortestPath(LevelView levelView, Location from, Func<Location, bool> isTarget)
         { 
             var queue = new Queue<Location>();
@@ -19,7 +18,7 @@ namespace SpurRoguelike.PlayerBot
             {
                 var currentLocation = queue.Dequeue();
                 var nextLocations = GetAdjacentLocations(currentLocation, levelView)
-                    .Where(l => (IsPassable(l, levelView) && !levelView.GetHealthPackAt(l).HasValue) || isTarget(l))
+                    .Where(l => IsPassable(l, levelView) || isTarget(l))
                     .Where(l => !previous.ContainsKey(l));
 
                 foreach (var nextLocation in nextLocations)
@@ -34,7 +33,7 @@ namespace SpurRoguelike.PlayerBot
             return null;
         }
 
-        public static List<Location> FindShortestPathWithInfluenceMap(LevelView levelView, int[,] influenceMap, Location from, Func<Location, bool> isTarget)
+        public static List<Location> FindShortestPathWithInfluenceMap(LevelView levelView, InfluenceMap influenceMap, Location from, Func<Location, bool> isTarget)
         {
             var notOpened = new SortedSet<LocationWithPriority>();
             var distances = new Dictionary<Location, int>();
@@ -58,13 +57,13 @@ namespace SpurRoguelike.PlayerBot
                 notOpened.Remove(toOpen);
 
                 if (toOpen.Priority == int.MaxValue)
-                    return null;
+                     return null;
                 if (isTarget(toOpen.Location))
                     return CreatePath(from, toOpen.Location, previous);
 
                 foreach (var adjacentLocation in GetAdjacentLocations(toOpen.Location, levelView).Where(l => IsPassable(l, levelView) || isTarget(l)))
                 {
-                    var currentDistance = toOpen.Priority + influenceMap[adjacentLocation.X, adjacentLocation.Y];
+                    var currentDistance = toOpen.Priority + influenceMap[adjacentLocation];
                     if (!previous.ContainsKey(adjacentLocation) || currentDistance < distances[adjacentLocation])
                     {
                         notOpened.Remove(new LocationWithPriority(adjacentLocation, distances[adjacentLocation]));
@@ -91,7 +90,7 @@ namespace SpurRoguelike.PlayerBot
         public static Turn GetFirstTurn(List<Location> path)
         {
             if (path == null || path.Count < 2)
-                return Turn.None;
+                 return Turn.None;
             var stepOffset = path[1] - path[0];
             return Turn.Step(stepOffset);
         }
@@ -103,14 +102,14 @@ namespace SpurRoguelike.PlayerBot
 
         private static bool IsPassable(Location location, LevelView levelView)
         {
-            if (levelView.GetMonsterAt(location).HasValue)
-                return false;
+            var isObject = levelView.GetHealthPackAt(location).HasValue ||
+                           levelView.GetMonsterAt(location).HasValue ||
+                           levelView.GetItemAt(location).HasValue;
 
-            if (levelView.GetItemAt(location).HasValue)
-                return false;
+            var isEmpty = levelView.Field[location] == CellType.Empty ||
+                          levelView.Field[location] == CellType.PlayerStart;
 
-            return levelView.Field[location] == CellType.Empty ||
-                   levelView.Field[location] == CellType.PlayerStart;
+            return !isObject && isEmpty;
         }
     }
 }

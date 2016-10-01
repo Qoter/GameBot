@@ -19,8 +19,7 @@ namespace SpurRoguelike.PlayerBot
 
         public static bool IsOutOfRange(this FieldView field, Location location)
         {
-            return location.X < 0 || location.Y < 0 ||
-                   location.X >= field.Width || location.Y >= field.Height;
+            return location.X < 0 || location.Y < 0 || location.X >= field.Width || location.Y >= field.Height;
         }
     }
 }
